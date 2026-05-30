@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leidenfrost Dosa Tava Simulation</title>
+    <style>
+        body { margin: 0; background: #222; color: white; font-family: sans-serif; text-align: center; }
+        canvas { background: #333; border: 5px solid #555; border-radius: 50%; margin-top: 20px; cursor: crosshair; }
+        p { margin: 10px; font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <h1>Leidenfrost Tava Simulation</h1>
+    <p>Click on the hot "Tava" to drop water and watch them merge!</p>
+    <canvas id="tava" width="500" height="500"></canvas>
+
+    <script>
+        const canvas = document.getElementById('tava');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const tavaRadius = canvas.width / 2 - 10;
+        let droplets = [];
+
+        class Droplet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = Math.random() * 5 + 4; // Random initial size
+                this.vx = (Math.random() - 0.5) * 4; // X velocity
+                this.vy = (Math.random() - 0.5) * 4; // Y velocity
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Friction/bouncing off the circular Tava edge
+                const distFromCenter = Math.hypot(this.x - centerX, this.y - centerY);
+                if (distFromCenter + this.radius > tavaRadius) {
+                    const angle = Math.atan2(this.y - centerY, this.x - centerX);
+                    this.vx = -Math.cos(angle) * 2;
+                    this.vy = -Math.sin(angle) * 2;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(173, 216, 230, 0.8)'; // Water blue
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+
+        // Check for collisions and merge droplets
+        function handleMerging() {
+            for (let i = 0; i < droplets.length; i++) {
+                for (let j = i + 1; j < droplets.length; j++) {
+                    const d1 = droplets[i];
+                    const d2 = droplets[j];
+                    const distance = Math.hypot(d1.x - d2.x, d1.y - d2.y);
+
+                    if (distance < d1.radius + d2.radius) {
+                        // Merge math: Combine volumes/areas to get new radius
+                        const newRadius = Math.sqrt(d1.radius ** 2 + d2.radius ** 2);
+                        
+                        // New position is the average based on mass/size
+                        d1.x = (d1.x + d2.x) / 2;
+                        d1.y = (d1.y + d2.y) / 2;
+                        d1.radius = newRadius;
+
+                        // Combine velocities
+                        d1.vx = (d1.vx + d2.vx) / 2;
+                        d1.vy = (d1.vy + d2.vy) / 2;
+
+                        // Remove the merged droplet
+                        droplets.splice(j, 1);
+                        j--; 
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Tava
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, tavaRadius, 0, Math.PI * 2);
+            ctx.fillStyle = '#2b2b2b';
+            ctx.fill();
+            ctx.closePath();
+
+            // Update and draw droplets
+            droplets.forEach(d => {
+                d.update();
+                d.draw();
+            });
+
+            handleMerging();
+            requestAnimationFrame(animate);
+        }
+
+        // Add droplet on click
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Only add if clicked inside the Tava
+            if (Math.hypot(x - centerX, y - centerY) < tavaRadius - 10) {
+                droplets.push(new Droplet(x, y));
+            }
+        });
+
+        animate();
+    </script>
+</body>
+</html>
